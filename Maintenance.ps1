@@ -38,3 +38,6 @@ foreach ($target in $targets) {
         Write-Host "Path tidak ditemukan: $path"
     }
 }
+
+Write-Host ""
+Read-Host "Tekan [Enter] untuk menutup jendela..."

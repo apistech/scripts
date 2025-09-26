@@ -92,4 +92,5 @@ foreach ($pattern in $patterns) {
     }
 }
 
-Write-Host "Log tersimpan di: $logFile" -ForegroundColor Cyan
+Write-Host "Selesai. Log tersimpan di: $logFile" -ForegroundColor Cyan
+Read-Host "Tekan [Enter] untuk menutup jendela..."

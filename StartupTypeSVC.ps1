@@ -301,3 +301,4 @@ foreach ($svc in $services) {
 
 Write-Host ""
 Write-Host "Selesai. Log tersimpan di: $logFile" -ForegroundColor Cyan
+Read-Host "Tekan [Enter] untuk menutup jendela..."

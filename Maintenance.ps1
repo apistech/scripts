@@ -10,13 +10,28 @@ Write-Host ""
 $targets = @(
     @{ Path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance"; Values = @("Activation Boundary") },
     @{ Path = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"; Values = @(
+        "AutofillCreditCardEnabled",
+        "BackgroundModeEnabled",
         "BasicAuthOverHttpEnabled",
-        "WindowsHelloForHTTPAuthEnabled",
-        "PasswordProtectionWarningTrigger",
         "BlockThirdPartyCookies",
-        "SitePerProcess",
+        "BookmarkBarEnabled",
         "DefaultInsecureContentSetting",
-        "AutofillCreditCardEnabled"
+        "PasswordProtectionWarningTrigger",
+        "ShowFullUrlsInAddressBar",
+        "SitePerProcess",
+        "WindowsHelloForHTTPAuthEnabled"
+    )}
+    @{ Path = "HKLM:\SOFTWARE\Policies\Google\Chrome"; Values = @(
+        "AutofillCreditCardEnabled",
+        "BackgroundModeEnabled",
+        "BasicAuthOverHttpEnabled",
+        "BlockThirdPartyCookies",
+        "BookmarkBarEnabled",
+        "DefaultInsecureContentSetting",
+        "PasswordProtectionWarningTrigger",
+        "ShowFullUrlsInAddressBar",
+        "SitePerProcess",
+        "WindowsHelloForHTTPAuthEnabled"
     )}
 )
 
@@ -40,4 +55,4 @@ foreach ($target in $targets) {
 }
 
 Write-Host ""
-Read-Host "Tekan [Enter] untuk menutup jendela..."
+Read-Host "Tekan [Enter] untuk keluar"

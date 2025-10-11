@@ -366,7 +366,8 @@ elseif ($mainChoice -eq "2") {
     "^VMAuthdService$",
     "^VMnetDHCP$",
     "^VMUSBArbService$",
-    "^VMware NAT Service$"
+    "^VMware NAT Service$",
+    "^WondersharePDFelement12DispatchService$"
     )
 
     Write-Host "Scanning service..." -ForegroundColor Yellow

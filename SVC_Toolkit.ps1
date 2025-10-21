@@ -86,6 +86,7 @@ DoSvc
 DmEnrollmentSvc
 dmwappushservice
 DevicePickerUserSvc
+DevQueryBroker
 diagsvc
 DPS
 WdiServiceHost

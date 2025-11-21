@@ -224,7 +224,6 @@ SgrmBroker
 TapiSrv
 TabletInputService
 TBS
-TextInputManagementService
 McmSvc
 UdkUserSvc
 UsoSvc

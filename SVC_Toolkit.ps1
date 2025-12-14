@@ -44,7 +44,6 @@ if ($mainChoice -eq "1") {
 # ====== DAFTAR SERVICE (gabungan Win7–Win11, auto-skip bila tidak ada) ======
 $servicesRaw = @"
 AxInstSV
-ADPSvc
 SensrSvc
 AeLookupSvc
 AarSvc
@@ -53,22 +52,17 @@ amd3dvcacheSvc
 AmdAppCompatSvc
 amdpmfservice
 AmdPpkgSvc
-AppReadiness
 AppIDSvc
 ALG
 AppMgmt
-AppXSvc
-AppXSVC
 AssignedAccessManagerSvc
 BITS
 BDESVC
 wbengine
 PeerDistSvc
-camsvc
 CaptureService
 autotimesvc
 CertPropSvc
-ClipSVC
 cbdhsvc
 CloudBackupRestoreSvc
 KeyIso
@@ -108,10 +102,8 @@ hkmsvc
 HomeGroupListener
 HomeGroupProvider
 BcastDVRUserService
-GameInputSvc
 lfsvc
 GraphicsPerfSvc
-hpatchmon
 HvHost
 vmickvpexchange
 vmicguestinterface
@@ -134,7 +126,6 @@ InventorySvc
 iphlpsvc
 IpxlatCfgSvc
 PolicyAgent
-LocalKdc
 KtmRm
 LxpSvc
 lltdsvc
@@ -158,7 +149,6 @@ smphost
 InstallService
 SmsRouter
 NaturalAuthentication
-Netlogon
 napagent
 NcdAutoSetup
 NcaSvc
@@ -180,9 +170,6 @@ IPBusEnum
 PhoneSvc
 PNRPAutoReg
 WPDBusEnum
-PrintNotify
-PrintDeviceConfigurationService
-PrintScanBrokerService
 PrintWorkflowUserSvc
 wercplsupport
 PcaSvc
@@ -190,7 +177,6 @@ ProtectedStorage
 QWAVE
 RmSvc
 TroubleshootingSvc
-refsdedupsvc
 RasAuto
 RasMan
 SessionEnv
@@ -210,8 +196,8 @@ ScDeviceEnum
 SCPolicySvc
 SNMPTRAP
 SNMPTrap
-shpamsvc
 SharedRealitySvc
+sppuinotify
 SSDPSRV
 WiaRpc
 StorSvc
@@ -224,7 +210,7 @@ SgrmBroker
 TapiSrv
 TabletInputService
 TBS
-McmSvc
+TextInputManagementService
 UdkUserSvc
 UsoSvc
 upnphost
@@ -242,16 +228,9 @@ WebClient
 WinDefend
 SDRSVC
 WbioSrvc
-idsvc
-WcsPlugInService
-FrameServer
-FrameServerMonitor
-Wcncsvc
 wcncsvc
-mpssvc
 WEPHOSTSVC
 WerSvc
-whesvc
 MpsSvc
 stisvc
 StiSvc
@@ -272,18 +251,15 @@ SecurityHealthService
 W32Time
 wuauserv
 WaaSMedicSvc
-ApxSvc
 WinHttpAutoProxySvc
 dot3svc
 WMPNetworkSvc
 workfolderssvc
-WSAIFabricSvc
 WwanSvc
 XboxGipSvc
 XblAuthManager
 XblGameSave
 XboxNetApiSvc
-ZTHELPER
 "@
 
     $services = $servicesRaw -split "`n" | ForEach-Object { $_.Trim() } | Sort-Object -Unique

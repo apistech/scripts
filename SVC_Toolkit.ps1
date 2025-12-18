@@ -225,6 +225,7 @@ WdNisSvc
 webthreatdefsvc
 webthreatdefusersvc
 WebClient
+WFDSConMgrSvc
 WinDefend
 SDRSVC
 WbioSrvc
@@ -323,7 +324,6 @@ elseif ($mainChoice -eq "2") {
     "^DptfPolicyLpmService$",
     "^edgeupdate([0-9\.]+)?$",
     "^edgeupdatem([0-9\.]+)?$",
-    "^esifsvc$",
     "^GoogleChromeElevationService([0-9\.]+)?$",
     "^GoogleUpdaterInternalService([0-9\.]+)?$",
     "^GoogleUpdaterService([0-9\.]+)?$",
@@ -331,7 +331,6 @@ elseif ($mainChoice -eq "2") {
     "^gupdatem([0-9\.]+)?$",
     "^HfcDisableService$",
     "^iaStorAfsService$",
-    "^ibtsiva$",
     "^igfxCUIService([0-9\.]+)?$",
     "^Intel\(R\) Capability Licensing Service TCP IP Interface$",
     "^Intel\(R\) TPM Provisioning Service$",

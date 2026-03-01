@@ -47,6 +47,7 @@ AxInstSV
 SensrSvc
 AeLookupSvc
 AarSvc
+ADPSvc
 AJRouter
 amd3dvcacheSvc
 AmdAppCompatSvc
@@ -102,6 +103,7 @@ hkmsvc
 HomeGroupListener
 HomeGroupProvider
 BcastDVRUserService
+GameInputSvc
 lfsvc
 GraphicsPerfSvc
 HvHost
@@ -147,7 +149,9 @@ NgcCtnrSvc
 swprv
 smphost
 InstallService
+wuqisvc
 SmsRouter
+McmSvc
 NaturalAuthentication
 napagent
 NcdAutoSetup
@@ -170,6 +174,8 @@ IPBusEnum
 PhoneSvc
 PNRPAutoReg
 WPDBusEnum
+PrintDeviceConfigurationService
+PrintScanBrokerService
 PrintWorkflowUserSvc
 wercplsupport
 PcaSvc
@@ -177,6 +183,7 @@ ProtectedStorage
 QWAVE
 RmSvc
 TroubleshootingSvc
+refsdedupsvc
 RasAuto
 RasMan
 SessionEnv
@@ -232,6 +239,7 @@ WbioSrvc
 wcncsvc
 WEPHOSTSVC
 WerSvc
+whesvc
 MpsSvc
 stisvc
 StiSvc
@@ -240,6 +248,7 @@ ehSched
 wisvc
 LicenseManager
 WManSvc
+midisrv
 MixedRealityOpenXRSvc
 icssvc
 spectrum
@@ -251,6 +260,7 @@ WSearch
 SecurityHealthService
 W32Time
 wuauserv
+ApxSvc
 WaaSMedicSvc
 WinHttpAutoProxySvc
 dot3svc
@@ -261,6 +271,7 @@ XboxGipSvc
 XblAuthManager
 XblGameSave
 XboxNetApiSvc
+ZTHELPER
 "@
 
     $services = $servicesRaw -split "`n" | ForEach-Object { $_.Trim() } | Sort-Object -Unique

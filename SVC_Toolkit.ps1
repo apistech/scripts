@@ -6,22 +6,28 @@ Write-Host "Jika PowerShell diblokir, jalankan: Set-ExecutionPolicy Unrestricted
 Write-Host "Setelah selesai, kunci kembali dengan: Set-ExecutionPolicy Restricted"
 Write-Host ""
 
-Write-Host "=== SERVICE TOOLKIT ===" -ForegroundColor Cyan
-Write-Host "1. Ubah StartupType (Disabled / Manual)"
-Write-Host "2. Hapus Service (Dry Run / Eksekusi)"
-$mainChoice = Read-Host "Pilih mode (1/2)"
-
 # Lokasi log universal
 if ($PSScriptRoot) {
     $scriptDir = $PSScriptRoot
 } else {
     $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 }
-$logFile = Join-Path $scriptDir ("ServiceToolkitLog_{0}.log" -f (Get-Date -Format "yyyyMMdd_HHmmss"))
-"=== Service Toolkit Log $(Get-Date) ===" | Out-File $logFile
 
 # Deteksi versi PowerShell
 $psMajor = $PSVersionTable.PSVersion.Major
+
+do {
+    Clear-Host
+    Write-Host "=== SERVICE TOOLKIT ===" -ForegroundColor Cyan
+    Write-Host "1. Ubah StartupType (Disabled / Manual)"
+    Write-Host "2. Hapus Service (Dry Run / Eksekusi)"
+    Write-Host "0. Keluar"
+    $mainChoice = Read-Host "Pilih mode (1/2/0)"
+
+    if ($mainChoice -eq "0") { break }
+
+    $logFile = Join-Path $scriptDir ("ServiceToolkitLog_{0}.log" -f (Get-Date -Format "yyyyMMdd_HHmmss"))
+    "=== Service Toolkit Log $(Get-Date) ===" | Out-File $logFile
 
 # =====================================================
 # 1. MODE STARTUPTYPE (Disabled / Manual)
@@ -394,6 +400,15 @@ elseif ($mainChoice -eq "2") {
     }
 }
 
+    Write-Host ""
+    Write-Host "Selesai. Log tersimpan di: $logFile" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "1. Kembali ke Menu Utama" -ForegroundColor Yellow
+    Write-Host "0. Keluar"
+    $afterChoice = Read-Host "Pilih (1/0)"
+
+} while ($afterChoice -eq "1")
+
 Write-Host ""
-Write-Host "Selesai. Log tersimpan di: $logFile" -ForegroundColor Cyan
-Read-Host "Tekan [Enter] untuk keluar"
+Write-Host "Sampai jumpa!" -ForegroundColor Cyan
+Start-Sleep -Seconds 1

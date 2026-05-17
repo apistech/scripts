@@ -1,89 +1,174 @@
 # 🛠️ apistech/scripts
 
-Kumpulan script PowerShell untuk **maintenance & optimasi Windows** (Registry & Services), dirancang untuk kemudahan penggunaan dan kompatibilitas luas dari Windows 7 hingga Windows 11.
+Kumpulan script PowerShell untuk **maintenance & optimasi Windows** dengan fokus pada manajemen Registry dan Services. Dirancang untuk kemudahan penggunaan dan kompatibilitas luas dari **Windows 7 hingga Windows 11**.
 
-> **📌 Status:** Script utama `SVC_Toolkit.ps1` telah digabung (merged) menjadi **1 toolkit serbaguna** yang mencakup fungsi Maintenance Registry + Management Services.
-
----
-
-## 📁 Daftar File dalam Repository
-
-| File | Fungsi |
-| :--- | :--- |
-| **`SVC_Toolkit.ps1`** | **Script utama** (PowerShell). Menu interaktif untuk: <br> • Cleanup registry values (Edge/Chrome/Maintenance)<br> • Ubah StartupType services (Disabled/Manual)<br> • Hapus service pihak ketiga (Dry run / Eksekusi) |
-| **`SVC_Toolkit.bat`** | Wrapper lokal. Menjalankan `SVC_Toolkit.ps1` dari folder yang sama. |
-| **`SVC_Toolkit_ONLINE.bat`** | Wrapper online. Mengunduh `SVC_Toolkit.ps1` langsung dari GitHub lalu menjalankannya (selalu versi terbaru). |
-| **`README.md`** | Dokumentasi ini. |
+> **📌 Status:** Toolkit terintegrasi dengan fitur Maintenance Registry + Service Management dalam satu script `SVC_Toolkit.ps1`
 
 ---
 
-## 🚀 Cara Penggunaan (2 Metode)
+## 📁 File dalam Repository
 
-### Metode 1: Jalankan Langsung (Lokal)
-1. **Download semua file** dari repository ini ke satu folder.
-2. **Klik kanan** pada `SVC_Toolkit.bat`.
-3. Pilih **"Run as administrator"** (WAJIB).
-
-### Metode 2: Selalu Versi Terbaru (Online)
-1. **Download hanya** `SVC_Toolkit_ONLINE.bat` (atau clone repo).
-2. **Klik kanan** pada `SVC_Toolkit_ONLINE.bat`.
-3. Pilih **"Run as administrator"** (WAJIB).
-4. Script akan otomatis mengunduh `SVC_Toolkit.ps1` dari GitHub, menjalankannya, lalu membersihkan file sementara.
+| File | Deskripsi |
+|:---|:---|
+| **`SVC_Toolkit.ps1`** | **Script utama** (PowerShell). Menu interaktif dengan 3 fungsi: Cleanup Registry, Ubah StartupType Services, dan Hapus Service Pihak Ketiga. Kompatibel Windows 7–11 dengan fallback WMI untuk PS 2.0. |
+| **`SVC_Toolkit.bat`** | Wrapper lokal. Menjalankan `SVC_Toolkit.ps1` dari folder yang sama dengan hak administrator. |
+| **`SVC_Toolkit_ONLINE.bat`** | Wrapper online. Unduh `SVC_Toolkit.ps1` langsung dari GitHub lalu jalankan—selalu versi terbaru, tidak perlu setup awal. |
 
 ---
 
-## 🎮 Menu Interaktif (Setelah Script Berjalan)
+## 🚀 Mulai Cepat
 
-#### 1️⃣ Cleanup Registry Values
-- Menghapus **20+ registry values** yang sudah ditentukan untuk:
-  - `Windows Maintenance` (Activation Boundary)
-  - `Microsoft Edge` (10 kebijakan, seperti autofill, background mode)
-  - `Google Chrome` (10 kebijakan serupa)
-- **Efek:** Me-reset kebijakan browser yang mungkin telah disetel sebelumnya.
+### Opsi 1: Setup Offline (Lokal)
+1. Clone atau download semua file ke satu folder
+2. Klik kanan **`SVC_Toolkit.bat`**
+3. Pilih **"Run as administrator"** (wajib)
+4. Pilih menu → selesai ✓
 
-#### 2️⃣ Ubah StartupType Services
-- Mengubah **200+ service** (daftar preset dari nLite + rekomendasi Windows 11) menjadi `Disabled` atau `Manual`.
-- Otomatis mendeteksi versi PowerShell (fallback ke WMI untuk Windows 7).
-- **Aman** – hanya memproses service yang ada dalam daftar.
+### Opsi 2: Online Mode (Tanpa Setup)
+1. Download hanya **`SVC_Toolkit_ONLINE.bat`**
+2. Klik kanan → **"Run as administrator"**
+3. Script akan unduh versi terbaru otomatis, jalankan, lalu bersihkan file sementara ✓
 
-#### 3️⃣ Hapus Service Pihak Ketiga
-- **Dry Run (mode 1):** Hanya menampilkan service yang cocok dengan pola, **tanpa menghapus**.
-- **Eksekusi (mode 2):** **Stop** dan **Hapus** service yang cocok dengan pola (Adobe, Brave, Chrome, Edge, VirtualBox, VMware, Wondershare, dll).
-- **⚠️ Peringatan:** Tidak bisa di-*undo*! Gunakan Dry Run terlebih dahulu.
+---
+
+## 🎮 Menu Utama
+
+Setelah script berjalan, pilih dari 3 fungsi utama:
+
+### 1️⃣ Cleanup Registry Values
+**Fungsi:** Hapus registry values yang sudah diset untuk browser/system policy
+
+**Target:**
+- **Windows Maintenance** – Activation Boundary
+- **Microsoft Edge** – 10 kebijakan (autofill, background mode, security, dll)
+- **Google Chrome** – 10 kebijakan yang sama
+
+**Hasil:** Me-reset ke default policy browser yang telah disesuaikan
+
+**Catatan:** Hanya menghapus value yang ada; skip otomatis untuk path/value yang tidak ditemukan
+
+---
+
+### 2️⃣ Ubah StartupType Services
+**Fungsi:** Ubah mode startup 200+ Windows services
+
+**Pilihan:**
+- **Disabled** → Service tidak berjalan saat boot
+- **Manual** → Service hanya berjalan saat dibutuhkan
+
+**Daftar service:** Dari nLite + rekomendasi Windows 11 (synced mudah di script)
+
+**Teknologi:**
+- PowerShell 4+: `Set-Service` cmdlet
+- PowerShell 2.0 (Win7): Fallback ke WMI auto-detect
+
+**Safety:** Hanya proses service yang terdaftar; report lengkap (berhasil/skip/gagal)
+
+---
+
+### 3️⃣ Hapus Service Pihak Ketiga
+**Fungsi:** Scan & hapus service dari aplikasi third-party (tidak bisa di-*undo*)
+
+**Pola match:** Adobe, Brave, Chrome, Edge, VirtualBox, VMware, Wondershare, Intel services, dll
+
+**2 Mode:**
+- **Dry Run (Mode 1):** List service yang cocok, tidak menghapus → gunakan untuk preview
+- **Eksekusi (Mode 2):** Stop + Delete service yang cocok → HATI-HATI ⚠️
+
+**Workflow:**
+1. Jalankan Dry Run dulu → validasi list
+2. Jalankan Eksekusi jika yakin
 
 ---
 
 ## 📋 Logging
 
-Setiap kali script dijalankan, akan dibuat file log otomatis di **folder yang sama** dengan script.
+Setiap eksekusi membuat file log otomatis:
 
-| Format nama | Contoh | Isi |
-| :--- | :--- | :--- |
-| `ToolkitLog_YYYYMMDD_HHMMSS.log` | `ToolkitLog_20260502_143022.log` | Semua tindakan (berhasil, gagal, dilewati) |
+```
+ToolkitLog_YYYYMMDD_HHMMSS.log
+```
+
+**Contoh:** `ToolkitLog_20260502_143022.log`
+
+**Lokasi:** Folder yang sama dengan script
+
+**Isi:** Semua action (berhasil ✓, skip ⊘, gagal ✗) dengan timestamp & pesan error (jika ada)
 
 ---
 
 ## 🖥️ Persyaratan Sistem
 
 | Komponen | Minimum | Rekomendasi |
-| :--- | :--- | :--- |
+|:---|:---|:---|
 | **OS** | Windows 7 | Windows 10/11 |
-| **PowerShell** | Versi 2.0 (default Windows 7) | Versi 5.1+ (fitur lebih baik) |
-| **Hak Akses** | **Administrator** (WAJIB) | Administrator |
-| **Arsitektur** | 32-bit / 64-bit | 64-bit |
+| **PowerShell** | 2.0* | 5.1+ |
+| **Akses** | Administrator | Administrator |
+| **Arch** | 32/64-bit | 64-bit |
 
-> **Untuk Windows 7:** Script otomatis menggunakan metode WMI fallback untuk kompatibilitas penuh.
+*PS 2.0 (default Windows 7): Otomatis gunakan WMI fallback, semua fitur tetap bekerja
 
 ---
 
-## ⚙️ Kustomisasi Daftar Service (Untuk Advanced User)
+## ⚙️ Customization (Advanced User)
 
-Jika Anda ingin menambah/mengurangi daftar service yang diproses di **Menu 2**, edit bagian `$servicesRaw` di dalam `SVC_Toolkit.ps1`:
+### Edit Daftar Registry Values
+Di **Menu 1**, target registry disimpan dalam `$registryTargetsRaw` (baris 45–67).
 
+Format:
 ```powershell
-$servicesRaw = @"
-AxInstSV
-SensrSvc
-AeLookupSvc
-... tambah atau hapus service di sini ...
-"@
+HKLM:\PATH\TO\KEY|ValueName
+```
+
+Contoh menambah:
+```powershell
+HKLM:\SOFTWARE\Policies\MyApp|PolicyKey
+```
+
+### Edit Daftar Services
+Di **Menu 2**, service list ada di `$servicesRaw` (baris 122–352).
+
+Format: satu service per baris, tanpa kutip. Mudah sync dengan nLite.
+
+Contoh:
+```
+MyService
+AnotherService
+```
+
+### Edit Daftar Pattern Service
+Di **Menu 3**, pattern matching ada di `$patternsRaw` (baris 426–461).
+
+Format: regex per baris. Mendukung versioning, contoh:
+```
+^GoogleChromeElevationService([0-9\.]+)?$
+^edgeupdate([0-9\.]+)?$
+```
+
+---
+
+## ⚠️ Penting & Safety Tips
+
+1. **Backup:** Buat System Restore Point sebelum jalankan
+2. **Test Dulu:** Menu 3 (Remove Service) → gunakan Dry Run terlebih dahulu
+3. **Admin Required:** Script akan error jika tidak run as admin
+4. **Read Logs:** Check log file jika ada yang fail
+5. **PowerShell Policy:** Script otomatis set `Unrestricted` saat jalankan (instruksi di header)
+
+---
+
+## 🔗 Versi & Changelog
+
+- **Latest:** Integrated Maintenance + Service Toolkit (v1.0)
+- Kompatibel Windows 7–11
+- PowerShell 2.0–5.1+ support
+
+---
+
+## 📝 Lisensi & Kontribusi
+
+Script ini adalah public repository. Silakan fork, modify, atau contribute improvement melalui pull request.
+
+---
+
+**Punya pertanyaan?** Buka issue atau cek log file untuk debugging. Happy maintaining! 🎯

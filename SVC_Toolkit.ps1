@@ -1,6 +1,5 @@
 # ============================
 # WINDOWS MAINTENANCE & SERVICE TOOLKIT
-# Gabungan Maintenance.ps1 + SVC_Toolkit.ps1
 # ============================
 
 Write-Host "Jika PowerShell diblokir, jalankan: Set-ExecutionPolicy Unrestricted" -ForegroundColor Yellow
@@ -452,6 +451,8 @@ $patternsRaw = @"
 ^jhi_service$
 ^MicrosoftEdgeElevationService([0-9\.]+)?$
 ^RstMwService$
+^ss_conn_service$
+^ss_conn_service2$
 ^VBoxSDS$
 ^VMAuthdService$
 ^VMnetDHCP$

@@ -1,70 +1,93 @@
 @echo off
-setlocal EnableDelayedExpansion
+setlocal enabledelayedexpansion
 title SVC Toolkit Launcher
+color 0A
 
-:: --- Config ---
-set "PS_URL=https://raw.githubusercontent.com/apistech/scripts/refs/heads/main/SVC_Toolkit.ps1"
-set "LOCAL_PS1=%~dp0SVC_Toolkit.ps1"
-set "TEMP_PS1=%~dp0SVC_Toolkit_temp.ps1"
+:: ============================================
+:: VARIABLES
+:: ============================================
+set "SCRIPT_DIR=%~dp0"
+set "PS_EXE=powershell.exe -NoProfile -ExecutionPolicy Bypass"
+set "TOOLKIT_URL=https://github.com/apistech/scripts/raw/refs/heads/main/SVC_Toolkit.ps1"
 
-:: --- Pre-flight check ---
-where powershell >nul 2>&1
-if errorlevel 1 (
-    echo [ERROR] PowerShell tidak ditemukan di PATH.
-    pause
-    exit /b 1
-)
-
+:: ============================================
+:: MENU UTAMA
+:: ============================================
 :menu
 cls
 echo ============================
-echo   SVC Toolkit Launcher
+echo     Pilih Menu
 echo ============================
-echo 1. SVC Toolkit (Online - download terbaru)
-echo 2. SVC Toolkit (Local)
-echo 0. Exit
+echo  1. SVC Toolkit (Local)
+echo  2. SVC Toolkit (Online)
+echo.
+echo  Tekan tombol lain untuk keluar
 echo ============================
-set /p "choice=Pilih menu: "
 
-if "%choice%"=="1" goto :online
-if "%choice%"=="2" goto :local
-if "%choice%"=="0" exit /b 0
+set "choice="
+set /p "choice=Masukkan pilihan (1-2): "
 
-echo Pilihan tidak valid.
-timeout /t 1 >nul
-goto :menu
+if not defined choice goto :exit
+if "%choice%"=="" goto :exit
 
-:online
-echo Mengunduh script dari %PS_URL% ...
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "try { Invoke-WebRequest -Uri '%PS_URL%' -OutFile '%TEMP_PS1%' -UseBasicParsing -ErrorAction Stop } catch { Write-Host '[ERROR]' $_.Exception.Message; exit 1 }"
+if "%choice%"=="1" goto :svc_local
+if "%choice%"=="2" goto :svc_online
 
-if errorlevel 1 (
-    echo Gagal mengunduh script.
+:: Jika input tidak valid
+goto :exit
+
+:: ============================================
+:: 1. SVC TOOLKIT (LOCAL)
+:: ============================================
+:svc_local
+set "SVC_SCRIPT=%SCRIPT_DIR%SVC_Toolkit.ps1"
+if not exist "%SVC_SCRIPT%" (
+    echo [ERROR] File tidak ditemukan: %SVC_SCRIPT%
+    echo Pastikan SVC_Toolkit.ps1 berada di folder yang sama.
     pause
     goto :menu
 )
 
-if not exist "%TEMP_PS1%" (
-    echo File hasil download tidak ditemukan.
-    pause
-    goto :menu
-)
+echo.
+echo [INFO] Menjalankan SVC Toolkit (Local)...
+%PS_EXE% -File "%SVC_SCRIPT%"
 
-echo Download selesai. Menjalankan...
-powershell -NoProfile -ExecutionPolicy Bypass -File "%TEMP_PS1%"
-
-echo Membersihkan file sementara...
-del /f /q "%TEMP_PS1%" 2>nul
+echo.
+echo [INFO] Selesai.
 pause
 goto :menu
 
-:local
-if not exist "%LOCAL_PS1%" (
-    echo [ERROR] SVC_Toolkit.ps1 tidak ditemukan di folder ini.
+:: ============================================
+:: 2. SVC TOOLKIT (ONLINE)
+:: ============================================
+:svc_online
+echo.
+echo [INFO] Mengunduh SVC Toolkit dari GitHub...
+
+%PS_EXE% -Command "Invoke-WebRequest -Uri '%TOOLKIT_URL%' -OutFile '%TEMP%\SVC_Toolkit.ps1' -UseBasicParsing"
+
+if not exist "%TEMP%\SVC_Toolkit.ps1" (
+    echo [ERROR] File tidak ditemukan setelah download.
     pause
     goto :menu
 )
-powershell -NoProfile -ExecutionPolicy Bypass -File "%LOCAL_PS1%"
+
+echo [INFO] Download selesai. Menjalankan SVC Toolkit...
+%PS_EXE% -File "%TEMP%\SVC_Toolkit.ps1"
+
+echo [INFO] Membersihkan file sementara...
+if exist "%TEMP%\SVC_Toolkit.ps1" del "%TEMP%\SVC_Toolkit.ps1"
+
+echo.
+echo [INFO] Selesai.
 pause
 goto :menu
+
+:: ============================================
+:: EXIT
+:: ============================================
+:exit
+echo.
+echo Keluar...
+timeout /t 1 /nobreak >nul
+exit /b 0

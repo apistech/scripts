@@ -1,15 +1,18 @@
-#Requires -Version 5.1
-# ============================
-# WINDOWS MAINTENANCE & SERVICE TOOLKIT
-# ============================
+# ============================================================
+#  WINDOWS MAINTENANCE & SERVICE TOOLKIT
+#  Compatible: PowerShell 2.0+ (Windows 7 SP1+)
+#  Requires : Administrator
+# ============================================================
 
 [CmdletBinding()]
 param()
 
-Set-StrictMode -Version Latest
+Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
-# ---------- Elevation ----------
+# ============================================================
+#  ELEVATION (PS 2.0 compatible)
+# ============================================================
 function Test-IsAdmin {
     $id = [Security.Principal.WindowsIdentity]::GetCurrent()
     $p  = New-Object Security.Principal.WindowsPrincipal($id)
@@ -18,26 +21,40 @@ function Test-IsAdmin {
 
 if (-not (Test-IsAdmin)) {
     Write-Host "Script butuh Administrator. Relaunch..." -ForegroundColor Yellow
-    $args = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
-    Start-Process powershell.exe -Verb RunAs -ArgumentList $args
+    $scriptPath = $MyInvocation.MyCommand.Definition
+    $argList = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`""
+    Start-Process powershell.exe -Verb RunAs -ArgumentList $argList
     exit
 }
 
-# ---------- Globals ----------
-$scriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Definition }
-$psMajor   = $PSVersionTable.PSVersion.Major
-$logFile   = $null
+# ============================================================
+#  GLOBALS
+# ============================================================
+$script:ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+if (Test-Path variable:\PSScriptRoot) {
+    if ($PSScriptRoot) { $script:ScriptDir = $PSScriptRoot }
+}
 
+$script:PSMajor = $PSVersionTable.PSVersion.Major
+$script:LogFile = $null
+$script:LogRetentionDays = 7
+
+# ============================================================
+#  LOGGING
+# ============================================================
 function Write-Log {
     param(
-        [string]$Message,
-        [ValidateSet('INFO','SUCCESS','WARN','ERROR','SKIP')]$Level = 'INFO'
+        [Parameter(Mandatory=$true)][string]$Message,
+        [ValidateSet('INFO','SUCCESS','WARN','ERROR','SKIP')][string]$Level = 'INFO'
     )
-    $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+
+    $ts   = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     $line = "[$ts][$Level] $Message"
-    if ($logFile) {
-        Add-Content -Path $logFile -Value $line -ErrorAction SilentlyContinue
+
+    if ($script:LogFile) {
+        Add-Content -Path $script:LogFile -Value $line -ErrorAction SilentlyContinue
     }
+
     switch ($Level) {
         'SUCCESS' { Write-Host $Message -ForegroundColor Green }
         'WARN'    { Write-Host $Message -ForegroundColor Yellow }
@@ -47,18 +64,64 @@ function Write-Log {
     }
 }
 
-function New-LogFile {
-    $script:logFile = Join-Path $scriptDir ("ToolkitLog_{0:yyyyMMdd_HHmmss}.log" -f (Get-Date))
-    "=== Toolkit Log $(Get-Date) ===" | Out-File -FilePath $logFile -Encoding utf8
-    Write-Log "Log: $logFile" 'INFO'
+function Remove-OldLogs {
+    $cutoff = (Get-Date).AddDays(-$script:LogRetentionDays)
+    Get-ChildItem -Path $script:ScriptDir -Filter 'ToolkitLog_*.log' -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -lt $cutoff } |
+        Remove-Item -Force -ErrorAction SilentlyContinue
 }
 
-# ---------- Registry Cleanup ----------
-function Invoke-RegistryCleanup {
-    Write-Host ""
-    Write-Host "=== CLEANUP REGISTRY VALUES ===" -ForegroundColor Cyan
+function New-LogFile {
+    Remove-OldLogs
+    $script:LogFile = Join-Path $script:ScriptDir ("ToolkitLog_{0:yyyyMMdd_HHmmss}.log" -f (Get-Date))
+    "=== Toolkit Log $(Get-Date) ===" | Out-File -FilePath $script:LogFile -Encoding utf8
+    Write-Log "Log: $($script:LogFile)" 'INFO'
+}
 
-    $registryTargetsRaw = @'
+# ============================================================
+#  SERVICE HELPERS (PS 2.0 safe)
+# ============================================================
+
+# Catatan: Set-Service -StartupType sudah ada sejak PS 2.0.
+# Tidak perlu WMI fallback untuk SET.
+function Set-ServiceStartup {
+    param(
+        [Parameter(Mandatory=$true)][string]$Name,
+        [Parameter(Mandatory=$true)][ValidateSet('Automatic','Manual','Disabled')][string]$StartupType
+    )
+    Set-Service -Name $Name -StartupType $StartupType -ErrorAction Stop
+}
+
+# Untuk GET: normalize WMI StartMode -> StartupType naming.
+function Get-ServiceStartType {
+    param([Parameter(Mandatory=$true)][string]$Name)
+
+    if ($script:PSMajor -ge 3) {
+        try {
+            $svc = Get-Service -Name $Name -ErrorAction Stop
+            return [string]$svc.StartType
+        }
+        catch {
+            # PS 3.0 + .NET 4.0: properti StartType belum ada -> fallback WMI
+        }
+    }
+
+    # PS 2.0: WMI. Normalize "Auto" -> "Automatic" agar konsisten.
+    $wmi = Get-WmiObject -Class Win32_Service -Filter "Name='$Name'" -ErrorAction SilentlyContinue
+    if (-not $wmi) { return $null }
+
+    switch ($wmi.StartMode) {
+        'Auto'     { return 'Automatic' }
+        'Manual'   { return 'Manual'   }
+        'Disabled' { return 'Disabled' }
+        default    { return [string]$wmi.StartMode }
+    }
+}
+
+# ============================================================
+#  REGISTRY CLEANUP
+# ============================================================
+$script:RegistryTargetsRaw = @'
 HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance|Activation Boundary
 HKLM:\SOFTWARE\Policies\Microsoft\Edge|AutofillCreditCardEnabled
 HKLM:\SOFTWARE\Policies\Microsoft\Edge|BackgroundModeEnabled
@@ -82,13 +145,21 @@ HKLM:\SOFTWARE\Policies\Google\Chrome|SitePerProcess
 HKLM:\SOFTWARE\Policies\Google\Chrome|WindowsHelloForHTTPAuthEnabled
 '@
 
-    $targets = $registryTargetsRaw -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ }
-    $ok = 0
+function Invoke-RegistryCleanup {
+    Write-Host ""
+    Write-Host "=== CLEANUP REGISTRY VALUES ===" -ForegroundColor Cyan
+
+    $targets = $script:RegistryTargetsRaw -split "`r?`n" |
+               ForEach-Object { $_.Trim() } |
+               Where-Object { $_ }
+
+    $ok   = 0
     $skip = 0
 
     foreach ($t in $targets) {
         $parts = $t -split '\|', 2
         if ($parts.Count -ne 2) { continue }
+
         $path = $parts[0]
         $name = $parts[1]
 
@@ -112,28 +183,14 @@ HKLM:\SOFTWARE\Policies\Google\Chrome|WindowsHelloForHTTPAuthEnabled
 
     Write-Host ""
     Write-Host "=== HASIL CLEANUP ===" -ForegroundColor Cyan
-    Write-Host "  Berhasil : $ok" -ForegroundColor Green
+    Write-Host "  Berhasil : $ok"   -ForegroundColor Green
     Write-Host "  Skip     : $skip" -ForegroundColor Yellow
 }
 
-# ---------- Service StartupType ----------
-function Set-ServiceStartupType {
-    Write-Host ""
-    Write-Host "=== UBAH STARTUP TYPE SERVICES ===" -ForegroundColor Cyan
-    Write-Host "1. Disabled"
-    Write-Host "2. Manual"
-    $c = Read-Host "Pilih (1/2)"
-
-    $target = switch ($c) {
-        '1' { 'Disabled' }
-        '2' { 'Manual' }
-        default {
-            Write-Log "Pilihan tidak valid." 'WARN'
-            return
-        }
-    }
-
-    $servicesRaw = @'
+# ============================================================
+#  SERVICE STARTUP TYPE
+# ============================================================
+$script:ServiceListRaw = @'
 AxInstSV
 SensrSvc
 AeLookupSvc
@@ -157,17 +214,13 @@ autotimesvc
 CertPropSvc
 cbdhsvc
 CloudBackupRestoreSvc
-KeyIso
 EventSystem
 COMSysApp
-CDPSvc
-CDPUserSvc
 DiagTrack
 ConsentUxUserSvc
 PimIndexMaintenanceSvc
 DsSvc
 DusmSvc
-dcsvc
 DoSvc
 DmEnrollmentSvc
 dmwappushservice
@@ -182,7 +235,6 @@ TrkWks
 MSDTC
 MapsBroker
 embeddedmode
-EFS
 EntAppSvc
 Eaphost
 EapHost
@@ -245,6 +297,7 @@ SmsRouter
 McmSvc
 NaturalAuthentication
 napagent
+Netlogon
 NcdAutoSetup
 NcaSvc
 NPSMSvc
@@ -272,7 +325,6 @@ wercplsupport
 PcaSvc
 ProtectedStorage
 QWAVE
-RmSvc
 TroubleshootingSvc
 refsdedupsvc
 RasAuto
@@ -303,13 +355,9 @@ TieringEngineService
 OneSyncSvc
 SysMain
 SENS
-TabletInputService
 SgrmBroker
 TapiSrv
-TabletInputService
 TBS
-TextInputManagementService
-UdkUserSvc
 UsoSvc
 upnphost
 UserDataSvc
@@ -337,7 +385,6 @@ StiSvc
 ehRecvr
 ehSched
 wisvc
-LicenseManager
 WManSvc
 midisrv
 MixedRealityOpenXRSvc
@@ -365,7 +412,23 @@ XboxNetApiSvc
 ZTHELPER
 '@
 
-    $services = $servicesRaw -split "`r?`n" |
+function Set-ServiceStartupType {
+    Write-Host ""
+    Write-Host "=== UBAH STARTUP TYPE SERVICES ===" -ForegroundColor Cyan
+    Write-Host "1. Disabled"
+    Write-Host "2. Manual"
+    $c = Read-Host "Pilih (1/2)"
+
+    $target = switch ($c) {
+        '1' { 'Disabled' }
+        '2' { 'Manual'   }
+        default {
+            Write-Log "Pilihan tidak valid." 'WARN'
+            return
+        }
+    }
+
+    $services = $script:ServiceListRaw -split "`r?`n" |
                 ForEach-Object { $_.Trim() } |
                 Where-Object { $_ } |
                 Sort-Object -Unique
@@ -375,73 +438,49 @@ ZTHELPER
     Write-Host "Memproses $($services.Count) service..."
     Write-Host ""
 
-    $ok = 0
+    $ok   = 0
     $skip = 0
     $fail = 0
 
     foreach ($name in $services) {
         try {
-            $svc = Get-Service -Name $name -ErrorAction Stop
+            $null = Get-Service -Name $name -ErrorAction Stop
 
-            if ($psMajor -ge 4) {
-                if ($svc.StartType -eq $target) {
-                    Write-Log "SKIP: $name sudah $target" 'SKIP'
-                    $skip++
-                    continue
-                }
-                Set-Service -Name $name -StartupType $target -ErrorAction Stop
-                Write-Log "SUCCESS: $name -> $target" 'SUCCESS'
-                $ok++
+            $current = Get-ServiceStartType -Name $name
+            if ($current -and ($current -eq $target)) {
+                Write-Log "SKIP: $name sudah $target" 'SKIP'
+                $skip++
+                continue
             }
-            else {
-                $wmi = Get-WmiObject -Class Win32_Service -Filter "Name='$name'" -ErrorAction Stop
-                if (-not $wmi) {
-                    Write-Log "SKIP: $name tidak ditemukan (WMI)" 'SKIP'
-                    $skip++
-                    continue
-                }
-                if ($wmi.StartMode -eq $target) {
-                    Write-Log "SKIP: $name sudah $target" 'SKIP'
-                    $skip++
-                    continue
-                }
-                $result = $wmi.ChangeStartMode($target)
-                if ($result.ReturnValue -eq 0) {
-                    Write-Log "SUCCESS: $name -> $target (WMI)" 'SUCCESS'
-                    $ok++
-                }
-                else {
-                    throw "WMI ReturnValue=$($result.ReturnValue)"
-                }
-            }
+
+            Set-ServiceStartup -Name $name -StartupType $target
+            Write-Log "SUCCESS: $name -> $target" 'SUCCESS'
+            $ok++
         }
         catch {
-            Write-Log "FAILED: $name - $($_.Exception.Message)" 'ERROR'
-            $fail++
+            $svcExists = Get-Service -Name $name -ErrorAction SilentlyContinue
+            if (-not $svcExists) {
+                Write-Log "SKIP: $name tidak ada" 'SKIP'
+                $skip++
+            }
+            else {
+                Write-Log "FAILED: $name - $($_.Exception.Message)" 'ERROR'
+                $fail++
+            }
         }
     }
 
     Write-Host ""
     Write-Host "=== HASIL SERVICE STARTUP ===" -ForegroundColor Cyan
-    Write-Host "  Berhasil : $ok" -ForegroundColor Green
+    Write-Host "  Berhasil : $ok"   -ForegroundColor Green
     Write-Host "  Skip     : $skip" -ForegroundColor Gray
     Write-Host "  Gagal    : $fail" -ForegroundColor Red
 }
 
-# ---------- Remove 3rd-party services ----------
-function Remove-MatchedServices {
-    Write-Host ""
-    Write-Host "=== HAPUS SERVICE PIHAK KETIGA ===" -ForegroundColor Cyan
-    Write-Host "1. Dry Run (lihat saja)"
-    Write-Host "2. Eksekusi (STOP + DELETE)" -ForegroundColor Red
-    $mode = Read-Host "Pilih (1/2)"
-
-    if ($mode -notin @('1','2')) {
-        Write-Log "Pilihan tidak valid." 'WARN'
-        return
-    }
-
-    $patternsRaw = @'
+# ============================================================
+#  STOP & DISABLE 3RD-PARTY SERVICES
+# ============================================================
+$script:ServicePatternsRaw = @'
 ^AdobeARMservice$
 ^AMD External Events Utility$
 ^amd3dvcacheSvc$
@@ -480,20 +519,39 @@ function Remove-MatchedServices {
 ^WondersharePDFelement12DispatchService$
 '@
 
-    $patterns = $patternsRaw -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+function Find-MatchedServices {
+    $patterns = $script:ServicePatternsRaw -split "`r?`n" |
+                ForEach-Object { $_.Trim() } |
+                Where-Object { $_ }
+
+    $found = @()
+    foreach ($svc in (Get-Service)) {
+        foreach ($p in $patterns) {
+            if ($svc.Name -match $p -or $svc.DisplayName -match $p) {
+                $found += $svc
+                break
+            }
+        }
+    }
+    return $found
+}
+
+function Stop-Disable-MatchedServices {
+    Write-Host ""
+    Write-Host "=== STOP & DISABLE SERVICE PIHAK KETIGA ===" -ForegroundColor Cyan
+    Write-Host "1. Dry Run (lihat saja)"
+    Write-Host "2. Eksekusi (STOP + DISABLE)" -ForegroundColor Yellow
+    $mode = Read-Host "Pilih (1/2)"
+
+    if (@('1','2') -notcontains $mode) {
+        Write-Log "Pilihan tidak valid." 'WARN'
+        return
+    }
 
     Write-Host ""
     Write-Host "Scanning..." -ForegroundColor Yellow
 
-    $found = @(Get-Service | Where-Object {
-        $svc = $_
-        foreach ($p in $patterns) {
-            if ($svc.Name -match $p -or $svc.DisplayName -match $p) {
-                return $true
-            }
-        }
-        return $false
-    })
+    $found = @(Find-MatchedServices)
 
     if ($found.Count -eq 0) {
         Write-Log "Tidak ada service yang cocok." 'SUCCESS'
@@ -502,42 +560,52 @@ function Remove-MatchedServices {
 
     Write-Host "Ditemukan $($found.Count) service:" -ForegroundColor Cyan
     foreach ($s in $found) {
-        Write-Log "[FOUND] $($s.DisplayName) ($($s.Name))" 'INFO'
+        $st = Get-ServiceStartType -Name $s.Name
+        Write-Log "[FOUND] $($s.DisplayName) ($($s.Name)) | Status=$($s.Status) StartType=$st" 'INFO'
     }
 
     if ($mode -eq '1') {
         Write-Host ""
         Write-Host "=== DRY RUN SELESAI ===" -ForegroundColor Cyan
-        Write-Host "Tidak ada yang dihapus. Jalankan mode 2 untuk eksekusi." -ForegroundColor Yellow
+        Write-Host "Tidak ada perubahan. Jalankan mode 2 untuk eksekusi." -ForegroundColor Yellow
         return
     }
 
     Write-Host ""
-    Write-Host "PERINGATAN: Service akan di-STOP lalu DELETE permanen." -ForegroundColor Red
-    $confirm = Read-Host "Ketik DELETE untuk lanjut"
-    if ($confirm -ne 'DELETE') {
+    Write-Host "PERINGATAN: Service akan di-STOP lalu di-DISABLE." -ForegroundColor Yellow
+    $confirm = Read-Host "Ketik YES untuk lanjut"
+    if ($confirm -ne 'YES') {
         Write-Log "Dibatalkan user." 'WARN'
         return
     }
 
-    $ok = 0
+    $ok   = 0
+    $skip = 0
     $fail = 0
 
     foreach ($svc in $found) {
         try {
-            if ($svc.Status -eq 'Running') {
-                Write-Host "  Stopping $($svc.Name)..." -ForegroundColor Yellow
-                Stop-Service -Name $svc.Name -Force -ErrorAction SilentlyContinue
-                Start-Sleep -Milliseconds 600
-            }
+            $name = $svc.Name
 
-            $out = & sc.exe delete $($svc.Name) 2>&1
-            if ($LASTEXITCODE -eq 0) {
-                Write-Log "DELETED: $($svc.Name)" 'SUCCESS'
-                $ok++
+            if ($svc.Status -eq [System.ServiceProcess.ServiceControllerStatus]::Running) {
+                Write-Host "  Stopping $name..." -ForegroundColor Yellow
+                Stop-Service -Name $name -Force -ErrorAction Stop
+                Start-Sleep -Milliseconds 400
+                Write-Log "STOPPED: $name" 'SUCCESS'
             }
             else {
-                throw "sc.exe exit=$LASTEXITCODE | $out"
+                Write-Log "SKIP STOP: $name sudah $($svc.Status)" 'SKIP'
+            }
+
+            $current = Get-ServiceStartType -Name $name
+            if ($current -eq 'Disabled') {
+                Write-Log "SKIP DISABLE: $name sudah Disabled" 'SKIP'
+                $skip++
+            }
+            else {
+                Set-ServiceStartup -Name $name -StartupType 'Disabled'
+                Write-Log "DISABLED: $name" 'SUCCESS'
+                $ok++
             }
         }
         catch {
@@ -547,12 +615,15 @@ function Remove-MatchedServices {
     }
 
     Write-Host ""
-    Write-Host "=== HASIL DELETE ===" -ForegroundColor Cyan
-    Write-Host "  Berhasil : $ok" -ForegroundColor Green
+    Write-Host "=== HASIL STOP + DISABLE ===" -ForegroundColor Cyan
+    Write-Host "  Berhasil : $ok"   -ForegroundColor Green
+    Write-Host "  Skip     : $skip" -ForegroundColor Gray
     Write-Host "  Gagal    : $fail" -ForegroundColor Red
 }
 
-# ---------- Main Menu ----------
+# ============================================================
+#  MENU
+# ============================================================
 function Show-MainMenu {
     Clear-Host
     Write-Host "=============================================" -ForegroundColor Cyan
@@ -564,16 +635,18 @@ function Show-MainMenu {
     Write-Host ""
     Write-Host "=== SERVICE MANAGEMENT ===" -ForegroundColor Green
     Write-Host "2.  Ubah StartupType Services (Disabled / Manual)"
-    Write-Host "3.  Hapus Service Pihak Ketiga (Dry Run / Eksekusi)"
+    Write-Host "3.  Stop & Disable Service Pihak Ketiga (Dry Run / Eksekusi)"
     Write-Host ""
     Write-Host "=== UTILITY ===" -ForegroundColor Green
     Write-Host "0.  Keluar"
     Write-Host ""
 }
 
-# ---------- Entry ----------
+# ============================================================
+#  ENTRY POINT
+# ============================================================
 Write-Host "Jika PowerShell diblokir, jalankan: Set-ExecutionPolicy Unrestricted" -ForegroundColor Yellow
-Write-Host "Setelah selesai, kunci kembali dengan: Set-ExecutionPolicy Restricted" -ForegroundColor Yellow
+Write-Host "Setelah selesai, kunci kembali dengan: Set-ExecutionPolicy Restricted"  -ForegroundColor Yellow
 Write-Host ""
 
 do {
@@ -582,7 +655,7 @@ do {
 
     if ($choice -eq '0') { break }
 
-    if ($choice -notin @('1','2','3')) {
+    if (@('1','2','3') -notcontains $choice) {
         Write-Host "Pilihan tidak valid." -ForegroundColor Yellow
         Start-Sleep -Seconds 1
         continue
@@ -593,12 +666,12 @@ do {
     switch ($choice) {
         '1' { Invoke-RegistryCleanup }
         '2' { Set-ServiceStartupType }
-        '3' { Remove-MatchedServices }
+        '3' { Stop-Disable-MatchedServices }
     }
 
     Write-Host ""
     Write-Host "=== LOG ===" -ForegroundColor Cyan
-    Write-Host "Log tersimpan di: $logFile" -ForegroundColor White
+    Write-Host "Log tersimpan di: $($script:LogFile)" -ForegroundColor White
     Write-Host ""
     Write-Host "1. Kembali ke Menu Utama" -ForegroundColor Yellow
     Write-Host "0. Keluar" -ForegroundColor Red

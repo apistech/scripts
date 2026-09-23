@@ -14,7 +14,7 @@ if %errorlevel% neq 0 (
 :: Variables
 set "SCRIPT_DIR=%~dp0"
 set "PS_EXE=powershell.exe -NoProfile -ExecutionPolicy Bypass"
-set "TOOLKIT_URL=https://github.com/apistech/scripts/raw/refs/heads/main/SVC_Toolkit.ps1"
+set "TOOLKIT_URL=https://github.com/apistech/scripts/raw/refs/heads/main/AIO_Toolkit.ps1"
 set "CHIPSET_URL=https://github.com/FirstEverTech/Universal-Intel-Chipset-Updater/raw/refs/heads/main/src/universal-intel-chipset-device-updater.ps1"
 set "WIFI_URL=https://github.com/FirstEverTech/Universal-Intel-WiFi-BT-Updater/raw/refs/heads/main/src/universal-intel-wifi-bt-driver-updater.ps1"
 set "TEMP_DIR=%TEMP%"
@@ -30,12 +30,16 @@ echo.
 echo [INFO] Mengunduh %~2 ...
 %PS_EXE% -Command ^
   "try { " ^
-  "  [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; " ^
-  "  Invoke-WebRequest -Uri '%URL%' -OutFile '%LOCAL%' -UseBasicParsing -ErrorAction Stop; " ^
-  "  if (-not (Test-Path '%LOCAL%')) { throw 'File tidak ada setelah download' } " ^
-  "  Write-Host '[OK] Download selesai' -ForegroundColor Green " ^
+  "  try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch { } ; " ^
+  "  if ($PSVersionTable.PSVersion.Major -ge 3) { " ^
+  "    Invoke-WebRequest -Uri '%URL%' -OutFile '%LOCAL%' -UseBasicParsing -ErrorAction Stop ; " ^
+  "  } else { " ^
+  "    (New-Object System.Net.WebClient).DownloadFile('%URL%','%LOCAL%') ; " ^
+  "  } ; " ^
+  "  if (-not (Test-Path '%LOCAL%')) { throw 'File tidak ada setelah download' } ; " ^
+  "  Write-Host '[OK] Download selesai' -ForegroundColor Green ; " ^
   "} catch { " ^
-  "  Write-Host ('[ERROR] ' + $_.Exception.Message) -ForegroundColor Red; " ^
+  "  Write-Host ('[ERROR] ' + $_.Exception.Message) -ForegroundColor Red ; " ^
   "  exit 1 " ^
   "}"
 
@@ -101,9 +105,16 @@ echo.
 echo [INFO] Menjalankan MAS Online...
 echo [WARN] Script remote - pastikan sumber terpercaya.
 %PS_EXE% -Command ^
-  "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; " ^
-  "try { iwr https://get.activated.win -UseBasicParsing | iex } " ^
-  "catch { Write-Host ('[ERROR] ' + $_.Exception.Message) -ForegroundColor Red }"
+  "try { " ^
+  "  try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch { } ; " ^
+  "  if ($PSVersionTable.PSVersion.Major -ge 3) { " ^
+  "    iwr https://get.activated.win -UseBasicParsing | iex ; " ^
+  "  } else { " ^
+  "    (New-Object System.Net.WebClient).DownloadString('https://get.activated.win') | iex ; " ^
+  "  } ; " ^
+  "} catch { " ^
+  "  Write-Host ('[ERROR] ' + $_.Exception.Message) -ForegroundColor Red ; " ^
+  "}"
 echo.
 echo [INFO] Selesai.
 pause
@@ -153,10 +164,10 @@ pause
 goto :menu
 
 :svc_local
-set "SVC_SCRIPT=%SCRIPT_DIR%SVC_Toolkit.ps1"
+set "SVC_SCRIPT=%SCRIPT_DIR%AIO_Toolkit.ps1"
 if not exist "%SVC_SCRIPT%" (
     echo [ERROR] File tidak ditemukan: %SVC_SCRIPT%
-    echo Pastikan SVC_Toolkit.ps1 ada di folder yang sama.
+    echo Pastikan AIO_Toolkit.ps1 ada di folder yang sama.
     pause
     goto :menu
 )
@@ -170,7 +181,7 @@ pause
 goto :menu
 
 :svc_online
-call :download_and_run "%TOOLKIT_URL%" "SVC_Toolkit.ps1"
+call :download_and_run "%TOOLKIT_URL%" "AIO_Toolkit.ps1"
 goto :menu
 
 :chipset_online
